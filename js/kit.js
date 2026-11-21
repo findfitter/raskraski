@@ -4,8 +4,7 @@ import { ALGO } from './regions.js';
 import { Session, normalizeSteps } from './paint.js';
 import { Viewer } from './viewer.js';
 import { loadPicture } from './loader.js';
-import { KIT_OPTS, KIT_VARIANT, kitFor, fxKey, tintLines, renderPreview } from './kit-style.js';
-import { KIT } from './kit-data.js';
+import { kitOptsFor, kitVariantFor, kitFor, fxKey, tintLines, renderPreview, magicNames } from './kit-style.js';
 import * as db from './db.js';
 
 const $ = (id) => document.getElementById(id);
@@ -50,7 +49,7 @@ const newSeed = () => (Math.random() * 2147483647) | 0;
 
 // ---------- подготовка картинки: области, контуры цвета темы, номера баночек ----------
 async function prepare(entry) {
-  const p = await loadPicture(entry, { key: KEY(entry.id), opts: KIT_OPTS, variant: KIT_VARIANT });
+  const p = await loadPicture(entry, { key: KEY(entry.id), opts: kitOptsFor(entry.id), variant: kitVariantFor(entry.id) });
   const k = kitFor(entry.id, p.regions);
   tintLines(p.lineCanvas, k.line);
   return { ...p, regions: { ...p.regions, color: k.color }, themeKey: k.source, counts: k.counts, pots: k.pots };
@@ -72,8 +71,8 @@ async function renderGallery() {
     b.dataset.id = e.id;
     b.innerHTML = '<div class="frame"><img class="thumb wait" alt="" draggable="false"></div><div class="meta"><span class="name"></span><span class="pbadge"></span></div><div class="sub"></div><div class="bar"><i></i></div>';
     b.querySelector('.name').textContent = e.title;
-    const kd = KIT[e.id];
-    b.querySelector('.sub').textContent = kd ? '✨ ' + kd.pots[9][0] : '';
+    const mn = magicNames(e.id);
+    b.querySelector('.sub').textContent = mn.length ? '✨ ' + mn.join(', ') : '';
     b.querySelector('.pbadge').textContent = pct + '%';
     b.querySelector('.bar i').style.width = pct + '%';
     const img = b.querySelector('img');
@@ -165,7 +164,7 @@ async function saveNow() {
 
 // ---------- баночки ----------
 function remaining() {
-  const left = new Int32Array(11);
+  const left = new Int32Array(pic.pots.length + 1);
   const R = pic.regions;
   for (let r = 1; r <= R.count; r++) if (session.cur[r] < 0) left[R.color[r]]++;
   return left;
@@ -181,6 +180,7 @@ function buildPots() {
   P.textContent = '';
   const t = document.createElement('div'); t.className = 'ttl'; t.textContent = 'Баночки'; P.appendChild(t);
   const grid = document.createElement('div'); grid.className = 'pots'; P.appendChild(grid);
+  P.style.setProperty('--rows', Math.ceil(pic.pots.length / 2)); // баночки сжимаются, чтобы поместиться без прокрутки
   const left = remaining();
   for (const pot of pic.pots) {
     const b = document.createElement('button');
@@ -296,7 +296,7 @@ async function exportAll() {
   const prog = (await db.allProgress()).filter((p) => p.id.startsWith('c-'));
   const items = {};
   for (const p of prog) items[p.id.slice(2)] = { algo: p.algo, steps: p.steps, percent: p.percent, updated: p.updated };
-  const data = { app: 'raskraska-kit', format: 1, algo: ALGO, variant: KIT_VARIANT, exported: new Date().toISOString(), items };
+  const data = { app: 'raskraska-kit', format: 1, algo: ALGO, variant: 'kit2', exported: new Date().toISOString(), items };
   const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
   const a = document.createElement('a'), d = new Date();
   a.href = URL.createObjectURL(blob);

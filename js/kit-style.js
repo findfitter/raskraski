@@ -4,6 +4,8 @@
 // Роли цветов в палитре (индекс 0..9 → номер баночки 1..10):
 // 0 фон, 1-4 основные, 5 светлый, 6 кремовый/белый, 7 акцент, 8 тёмный, 9 блёстки.
 import { KIT } from './kit-data.js';
+import { KIT_COMPLEX } from './kit-data-complex.js';
+import { KIT_COLORMAP, CM_W, CM_H } from './kit-colormaps.js';
 import { EFFECTS } from './effects.js';
 
 const P = (name, line, list) => ({ name, line, colors: list });
@@ -49,7 +51,12 @@ export const THEME_OF = {
 
 export const rgbOf = (hex) => parseInt(hex.slice(1), 16);
 export const KIT_OPTS = { minAreaFrac: 0.00015 };   // мельче сливаем реже: больше областей
-export const KIT_VARIANT = 'kit1';
+const KIT_VARIANT = 'kit2';
+/** Параметры поиска областей для картинки: у сложных свой, более крупный порог слияния. */
+export function kitOptsFor(id) { const c = KIT_COMPLEX[id]; return c ? { minAreaFrac: c.minAreaFrac } : KIT_OPTS; }
+export function kitVariantFor(id) { return KIT_VARIANT + ':' + kitOptsFor(id).minAreaFrac; }
+/** Названия «волшебных» (с эффектом) баночек картинки, для подписи в галерее. */
+export function magicNames(id) { const d = KIT[id] || KIT_COMPLEX[id]; return d ? d.pots.filter((p) => p[2]).map((p) => p[0]) : []; }
 
 /** Палитра темы в виде [{n, name, hex, rgb, glitter}] */
 export function potsOf(themeKey) {
@@ -59,16 +66,54 @@ export function potsOf(themeKey) {
 /** Описание баночки из данных: [название, цвет, эффект?] */
 const potFrom = (row, i) => ({ n: i + 1, name: row[0], hex: row[1], rgb: rgbOf(row[1]), effect: row[2] || 0, glitter: (row[2] || 0) === 1 });
 
+const cmCache = new Map();
+function cmDecode(id, str) {   // RLE-цветовая карта → Uint8Array (CM_W x CM_H)
+  if (cmCache.has(id)) return cmCache.get(id);
+  const out = new Uint8Array(CM_W * CM_H);
+  let pos = 0;
+  for (let i = 0; i < str.length;) {
+    const v = str.charCodeAt(i++) - 65;
+    let j = i;
+    while (j < str.length && str.charCodeAt(j) >= 48 && !(str.charCodeAt(j) >= 65 && str.charCodeAt(j) <= 90)) j++;
+    const n = parseInt(str.slice(i, j), 36);
+    out.fill(v, pos, pos + n);
+    pos += n; i = j;
+  }
+  cmCache.set(id, out);
+  return out;
+}
+
 /**
- * Номера баночек для областей картинки: вручную подобранные цвета (kit-data.js) или, если данные не подходят
- * к найденным областям, автоматическая раскраска по теме.
+ * Номера баночек для областей картинки: цвета, подобранные вручную (цветовая карта в kit-colormaps.js).
+ * Цвет области определяется голосованием по карте, поэтому небольшие отличия в найденных областях
+ * (другой JPEG-декодер) ничего не ломают. Если данных нет — автоматическая раскраска по теме.
  */
 export function kitFor(id, regions) {
-  const d = KIT[id];
-  const counts = new Int32Array(11);
-  if (d && d.map.length === regions.count) {
-    const color = new Uint8Array(regions.count + 1);
-    d.map.forEach((v, i) => { color[i + 1] = v; counts[v]++; });
+  const d = KIT[id] || KIT_COMPLEX[id];
+  const cmStr = KIT_COLORMAP[id];
+  if (d && cmStr) {
+    const cm = cmDecode(id, cmStr), n = d.pots.length, K = regions.count, { w, h, map, lx, ly } = regions;
+    const votes = new Uint16Array((K + 1) * (n + 1));
+    const kx = w / CM_W, ky = h / CM_H;
+    for (let cy = 0; cy < CM_H; cy++) {
+      const y = Math.min(h - 1, Math.floor((cy + 0.5) * ky));
+      for (let cx = 0; cx < CM_W; cx++) {
+        const v = cm[cy * CM_W + cx];
+        if (!v || v > n) continue;
+        const r = map[y * w + Math.min(w - 1, Math.floor((cx + 0.5) * kx))];
+        if (r) votes[r * (n + 1) + v]++;
+      }
+    }
+    const color = new Uint8Array(K + 1), counts = new Int32Array(n + 1);
+    for (let r = 1; r <= K; r++) {
+      let best = 0, bn = 0;
+      for (let v = 1; v <= n; v++) { const c = votes[r * (n + 1) + v]; if (c > bn) { bn = c; best = v; } }
+      if (!best) {   // у области не нашлось ни одной выборки (очень мелкая): берём цвет у её точки номера
+        const v = cm[Math.min(CM_H - 1, Math.floor(ly[r] / ky)) * CM_W + Math.min(CM_W - 1, Math.floor(lx[r] / kx))];
+        best = v >= 1 && v <= n ? v : 1;
+      }
+      color[r] = best; counts[best]++;
+    }
     return { color, counts, pots: d.pots.map(potFrom), line: d.line, source: 'manual' };
   }
   const themeKey = THEME_OF[id] || 'rose';

@@ -1,5 +1,6 @@
 /* Вариант «набор»: пастельные тона, рамка, баночки с краской */
 body.kit { --bg: #f1e9df; --bar: #5b4a63; --accent: #e8738f; --pot: clamp(68px, 10vh, 90px); background: var(--bg); }
+.kitpanel { --pot: clamp(48px, calc((100vh - 150px) / var(--rows, 5) - 14px), 90px); }
 
 .kit .gbar h1 { font-size: 26px; }
 .kit .topbar { gap: 8px; }
