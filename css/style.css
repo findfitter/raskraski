@@ -124,3 +124,23 @@ svg { width: 26px; height: 26px; fill: currentColor; flex: none; }
 .fx-silver { background: linear-gradient(135deg, #8d949e, #dfe3e8 35%, #fff 55%, #dfe3e8 75%, #8d949e); }
 .fx-pearl { background: linear-gradient(135deg, #ffd1e8, #d8c8ff 28%, #c4f0ff 52%, #d4ffe8 74%, #fff3c4); }
 a.btn { text-decoration: none; }
+
+/* ---------- волшебные (анимированные) краски ---------- */
+@keyframes flow { to { background-position: 300% 0; } }
+@keyframes glow { from { filter: brightness(1) saturate(1); } to { filter: brightness(1.28) saturate(1.25); } }
+@keyframes beat { from { font-size: 20px; } to { font-size: 31px; } }
+.fx-twinkle {
+  background:
+    radial-gradient(circle at 24% 28%, #fff 0 2.5px, transparent 4px), radial-gradient(circle at 74% 24%, #fff 0 2px, transparent 3.5px),
+    radial-gradient(circle at 60% 72%, #ffe27a 0 3px, transparent 4.5px), radial-gradient(circle at 22% 76%, #fff 0 2px, transparent 3.5px), var(--cur);
+  animation: glow 1.3s ease-in-out infinite alternate;
+}
+.fx-rainflow { background: linear-gradient(120deg, #ff3b3b, #ff9a1f, #ffe135, #4cd964, #35c8ff, #6b5bff, #c453ff, #ff3b3b); background-size: 300% 100%; animation: flow 2.6s linear infinite; }
+.fx-galaxy {
+  background: radial-gradient(circle at 28% 30%, rgba(200,80,170,.8), transparent 55%), radial-gradient(circle at 76% 72%, rgba(58,160,200,.8), transparent 55%),
+    radial-gradient(circle at 60% 25%, #fff 0 1.5px, transparent 2.5px), radial-gradient(circle at 30% 75%, #fff 0 1.5px, transparent 2.5px), #2a1b5a;
+  animation: glow 1.8s ease-in-out infinite alternate;
+}
+.fx-pearlflow { background: linear-gradient(120deg, #ffd1e8, #d8c8ff, #c4f0ff, #d4ffe8, #fff3c4, #ffd1e8); background-size: 300% 100%; animation: flow 3.6s linear infinite; }
+.fx-flyhearts { background: #fde8ef; color: #ff4f81; text-shadow: none; animation: beat .9s ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) { .fx-twinkle, .fx-rainflow, .fx-galaxy, .fx-pearlflow, .fx-flyhearts { animation: none; } }

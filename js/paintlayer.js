@@ -1,6 +1,6 @@
 // Слой «краски»: мазки кистью и узоры эффектов. Лежит над слоем плоских заливок и под контурами.
 // Каждый мазок/узор ограничен областью, в которой он начат, поэтому за линии краска не выходит.
-import { mulberry32, css, mix, patternFor, isPatternEffect, SPARKLE, drawSparkle, heart, star5 } from './effects.js';
+import { mulberry32, css, mix, patternFor, isPatternEffect, isAnimated, baseColor, SPARKLE, drawSparkle, heart, star5 } from './effects.js';
 
 const KEY = { 2: 'rainbow', 5: 'gold', 6: 'silver', 7: 'pearl' };
 const mk = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = Math.max(1, h); return c; };
@@ -47,7 +47,8 @@ export class LiveStroke {
 
   _style() {
     const e = this.e;
-    if (e === 0 || e === 1) return css(this.c);
+    if (e === 0 || e === 1 || e === 8) return css(this.c);
+    if (isAnimated(e)) return css(baseColor(e, this.c)); // статичный вид анимированной краски
     if (e === 2) return `hsl(${(this.hue0 + this.dist * 1.5) % 360} 92% 56%)`;
     return this.pattern; // золото/серебро/перламутр; у сердечек и звёзд подложки нет
   }
@@ -152,7 +153,10 @@ export class LiveStroke {
     ctx.restore();
   }
 
-  commit() { this.pl.ctx.drawImage(this.canvas, this.rect.x, this.rect.y); }
+  commit() {
+    this.pl.ctx.drawImage(this.canvas, this.rect.x, this.rect.y);
+    if (isAnimated(this.e)) this.pl.maskFor(this.e).getContext('2d').drawImage(this.canvas, this.rect.x, this.rect.y); // форма для анимации
+  }
 
   step() { return { k: 's', r: this.r, c: this.c, e: this.e, z: this.z, s: this.seed, p: this.pts }; }
 }
@@ -163,9 +167,50 @@ export class PaintLayer {
     this.canvas = mk(w, h);
     this.ctx = this.canvas.getContext('2d');
     this.live = null;
+    this.masks = {};   // эффект → холст-форма (где лежит анимированная краска)
+    this.anim = {};    // эффект → рамка, в которой он анимируется (считается по шагам)
   }
 
-  clear() { this.ctx.clearRect(0, 0, this.w, this.h); }
+  /** Холст-форма анимированного эффекта e (создаётся по требованию). */
+  maskFor(e) {
+    if (!this.masks[e]) this.masks[e] = mk(this.w, this.h);
+    return this.masks[e];
+  }
+  hasAnim() { return Object.keys(this.anim).length > 0; }
+
+  /** Пересчитать, какие анимированные эффекты на картинке и в какой рамке (по шагам сессии). */
+  setAnimFromSession(session) {
+    const out = {};
+    const add = (e, x0, y0, x1, y1) => {
+      const r = out[e];
+      if (!r) out[e] = { x0, y0, x1, y1 };
+      else { r.x0 = Math.min(r.x0, x0); r.y0 = Math.min(r.y0, y0); r.x1 = Math.max(r.x1, x1); r.y1 = Math.max(r.y1, y1); }
+    };
+    const R = this.regions;
+    for (let r = 1; r <= R.count; r++) {
+      if (!session.byRegion[r].length) continue;
+      for (const st of session.stepsOfRegion(r)) {
+        if (!isAnimated(st.e)) continue;
+        if (st.k === 'f') add(st.e, R.bbox[r * 4], R.bbox[r * 4 + 1], R.bbox[r * 4 + 2] + 1, R.bbox[r * 4 + 3] + 1);
+        else {
+          let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+          for (let i = 0; i < st.p.length; i += 2) { x0 = Math.min(x0, st.p[i] / 4); x1 = Math.max(x1, st.p[i] / 4); y0 = Math.min(y0, st.p[i + 1] / 4); y1 = Math.max(y1, st.p[i + 1] / 4); }
+          const m = st.z / 2 + 3;
+          add(st.e, Math.max(0, Math.floor(x0 - m)), Math.max(0, Math.floor(y0 - m)), Math.min(this.w, Math.ceil(x1 + m)), Math.min(this.h, Math.ceil(y1 + m)));
+        }
+      }
+    }
+    for (const e of Object.keys(out)) {
+      const r = out[e];
+      r.x0 = Math.max(0, r.x0); r.y0 = Math.max(0, r.y0); r.x1 = Math.min(this.w, r.x1); r.y1 = Math.min(this.h, r.y1);
+    }
+    this.anim = out;
+  }
+
+  clear() {
+    this.ctx.clearRect(0, 0, this.w, this.h);
+    for (const m of Object.values(this.masks)) m.getContext('2d').clearRect(0, 0, this.w, this.h);
+  }
 
   clearRegion(r) {
     const rect = regionRect(this.regions, r);
@@ -174,6 +219,12 @@ export class PaintLayer {
     c.globalCompositeOperation = 'destination-out';
     c.drawImage(m, rect.x, rect.y);
     c.globalCompositeOperation = 'source-over';
+    for (const mk2 of Object.values(this.masks)) {
+      const x = mk2.getContext('2d');
+      x.globalCompositeOperation = 'destination-out';
+      x.drawImage(m, rect.x, rect.y);
+      x.globalCompositeOperation = 'source-over';
+    }
   }
 
   /** Начать мазок «вживую». */
@@ -205,6 +256,7 @@ export class PaintLayer {
     const ctx = cv.getContext('2d');
     ctx.translate(-rect.x, -rect.y);
     const rnd = mulberry32(s);
+    if (isAnimated(e)) { ctx.fillStyle = css(baseColor(e, c)); ctx.fillRect(rect.x, rect.y, rect.w, rect.h); } // статичный вид
     if (isPatternEffect(e)) {
       ctx.fillStyle = patternFor(ctx, KEY[e]);
       ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
@@ -232,6 +284,7 @@ export class PaintLayer {
     ctx.drawImage(buildMask(this.regions, this.w, r, rect), 0, 0);
     ctx.restore();
     this.ctx.drawImage(cv, rect.x, rect.y);
+    if (isAnimated(e)) this.maskFor(e).getContext('2d').drawImage(buildMask(this.regions, this.w, r, rect), rect.x, rect.y);
   }
 
   /** Перерисовать краску одной области по её шагам (начиная с последней заливки). */

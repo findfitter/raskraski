@@ -11,7 +11,14 @@ export const EFFECTS = [
   { id: 5, key: 'gold', name: 'Золото' },
   { id: 6, key: 'silver', name: 'Серебро' },
   { id: 7, key: 'pearl', name: 'Перламутр' },
+  // анимированные «волшебные» краски: на холсте живут (мерцают, переливаются, летят)
+  { id: 8, key: 'twinkle', name: 'Мерцающие блёстки', anim: true },
+  { id: 9, key: 'rainflow', name: 'Радужный перелив', anim: true },
+  { id: 10, key: 'galaxy', name: 'Галактика', anim: true },
+  { id: 11, key: 'pearlflow', name: 'Жемчужный перелив', anim: true },
+  { id: 12, key: 'flyhearts', name: 'Летящие сердечки', anim: true },
 ];
+export const isAnimated = (e) => e >= 8;
 export const BRUSH_SIZES = [6, 14, 28, 52]; // диаметр кисти в пикселях картинки
 
 export function mulberry32(a) {
@@ -40,6 +47,11 @@ export function baseColor(e, rgb) {
     case 5: return 0xe3b84a;
     case 6: return 0xc9ced6;
     case 7: return 0xf1e4f6;
+    case 8: return rgb;
+    case 9: return 0xffd6e8;
+    case 10: return 0x3a2a6b;
+    case 11: return 0xf1e4f6;
+    case 12: return mix(rgb, 0xffffff, 0.7);
     default: return rgb;
   }
 }
@@ -114,6 +126,7 @@ export const SPARKLE = {
   5: { stroke: 0.004, fill: 0.0016, stars: 0.5 },
   6: { stroke: 0.004, fill: 0.0016, stars: 0.5 },
   7: { stroke: 0.006, fill: 0.0025, stars: 0.5 },
+  8: { stroke: 0.012, fill: 0.006, stars: 0.16 }, // статичный вид мерцающих блёсток (под анимацией)
 };
 
 /** Одна блёстка: цвета подбираются от выбранного цвета кисти. */
@@ -121,7 +134,7 @@ export function drawSparkle(ctx, rnd, x, y, e, color, size) {
   const stars = SPARKLE[e].stars;
   const pick = rnd();
   let fill;
-  if (e === 1) fill = pick < 0.42 ? '#ffffff' : pick < 0.64 ? '#ffe27a' : pick < 0.84 ? css(mix(color, 0xffffff, 0.55)) : css(mix(color, 0x000000, 0.22));
+  if (e === 1 || e === 8) fill = pick < 0.42 ? '#ffffff' : pick < 0.64 ? '#ffe27a' : pick < 0.84 ? css(mix(color, 0xffffff, 0.55)) : css(mix(color, 0x000000, 0.22));
   else fill = pick < 0.8 ? '#ffffff' : '#fff6c9';
   ctx.fillStyle = fill;
   const s = size * (0.7 + rnd() * 1.2);

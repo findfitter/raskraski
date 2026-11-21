@@ -27,9 +27,9 @@ body.kit { --bg: #f1e9df; --bar: #5b4a63; --accent: #e8738f; --pot: clamp(68px, 
 .pots { display: grid; grid-template-columns: repeat(2, var(--pot)); gap: 14px 12px; }
 .pot { --c: #ccc; position: relative; width: var(--pot); height: var(--pot); padding: 0; border: 0; border-radius: 50%; background: #fff; cursor: pointer;
   box-shadow: 0 4px 0 rgba(60,40,30,.2), 0 0 0 2px rgba(60,40,30,.07); transition: transform .12s; }
-.pot .paint { position: absolute; inset: 8%; border-radius: 50%;
-  background: radial-gradient(circle at 32% 26%, rgba(255,255,255,.7) 0 9%, transparent 10%), radial-gradient(circle at 50% 55%, var(--c) 0 58%, color-mix(in srgb, var(--c) 80%, #000) 100%);
+.pot .paint { position: absolute; inset: 8%; border-radius: 50%; background: radial-gradient(circle at 50% 55%, var(--c) 0 58%, color-mix(in srgb, var(--c) 80%, #000) 100%);
   box-shadow: inset 0 -5px 8px rgba(0,0,0,.16), inset 0 3px 5px rgba(255,255,255,.4); }
+.pot .paint::before { content: ''; position: absolute; inset: 0; border-radius: 50%; z-index: 1; background: radial-gradient(circle at 32% 26%, rgba(255,255,255,.7) 0 9%, transparent 10%); }
 .pot .num { position: absolute; left: 50%; top: 50%; width: 46%; height: 46%; transform: translate(-50%, -50%); border-radius: 50%; background: #fff; color: #2a2638;
   font-weight: 800; font-size: calc(var(--pot) * .27); display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,.35); }
 .pot .left { position: absolute; right: -5px; bottom: -5px; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 13px; background: #5b4a63; color: #fff; font-size: 13px; font-weight: 700;
@@ -43,3 +43,13 @@ body.kit { --bg: #f1e9df; --bar: #5b4a63; --accent: #e8738f; --pot: clamp(68px, 
     radial-gradient(circle at 36% 20%, #fff6c9 0 1.5px, transparent 2.5px), radial-gradient(circle at 86% 58%, #fff 0 1.5px, transparent 2.5px); }
 .pot.pulse { animation: pulse .5s ease 2; }
 .potname { font-size: 12px; color: #7a7083; text-align: center; min-height: 32px; line-height: 1.25; }
+
+/* волшебные (анимированные) баночки */
+.pot.fx-twinkle .paint, .pot.fx-flyhearts .paint { animation: glow 1.3s ease-in-out infinite alternate; }
+.pot.fx-rainflow .paint { background: linear-gradient(120deg, #ff3b3b, #ff9a1f, #ffe135, #4cd964, #35c8ff, #6b5bff, #c453ff, #ff3b3b); background-size: 300% 100%; animation: flow 2.6s linear infinite; }
+.pot.fx-pearlflow .paint { background: linear-gradient(120deg, #ffd1e8, #d8c8ff, #c4f0ff, #d4ffe8, #fff3c4, #ffd1e8); background-size: 300% 100%; animation: flow 3.6s linear infinite; }
+.pot.fx-galaxy .paint { background: radial-gradient(circle at 30% 30%, rgba(200,80,170,.85), transparent 55%), radial-gradient(circle at 74% 72%, rgba(58,160,200,.85), transparent 55%), #2a1b5a; animation: glow 1.8s ease-in-out infinite alternate; }
+.pot.fx-galaxy .paint::after, .pot.fx-flyhearts .paint::after, .pot.fx-twinkle .paint::after { content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle at 22% 62%, #fff 0 2px, transparent 3px), radial-gradient(circle at 78% 30%, #fff 0 2px, transparent 3px), radial-gradient(circle at 70% 78%, #fff6c9 0 2.5px, transparent 3.5px); }
+.pot.fx-flyhearts .paint::after { background: radial-gradient(circle at 30% 70%, #ff4f81 0 4px, transparent 5px), radial-gradient(circle at 70% 40%, #ff4f81 0 3px, transparent 4px), radial-gradient(circle at 55% 78%, #fff 0 3px, transparent 4px); }
+@media (prefers-reduced-motion: reduce) { .pot.magic .paint { animation: none; } }

@@ -3,6 +3,9 @@
 //
 // Роли цветов в палитре (индекс 0..9 → номер баночки 1..10):
 // 0 фон, 1-4 основные, 5 светлый, 6 кремовый/белый, 7 акцент, 8 тёмный, 9 блёстки.
+import { KIT } from './kit-data.js';
+import { EFFECTS } from './effects.js';
+
 const P = (name, line, list) => ({ name, line, colors: list });
 
 export const THEMES = {
@@ -52,6 +55,28 @@ export const KIT_VARIANT = 'kit1';
 export function potsOf(themeKey) {
   return THEMES[themeKey].colors.map(([name, hex], i) => ({ n: i + 1, name, hex, rgb: rgbOf(hex), glitter: i === 9 }));
 }
+
+/** Описание баночки из данных: [название, цвет, эффект?] */
+const potFrom = (row, i) => ({ n: i + 1, name: row[0], hex: row[1], rgb: rgbOf(row[1]), effect: row[2] || 0, glitter: (row[2] || 0) === 1 });
+
+/**
+ * Номера баночек для областей картинки: вручную подобранные цвета (kit-data.js) или, если данные не подходят
+ * к найденным областям, автоматическая раскраска по теме.
+ */
+export function kitFor(id, regions) {
+  const d = KIT[id];
+  const counts = new Int32Array(11);
+  if (d && d.map.length === regions.count) {
+    const color = new Uint8Array(regions.count + 1);
+    d.map.forEach((v, i) => { color[i + 1] = v; counts[v]++; });
+    return { color, counts, pots: d.pots.map(potFrom), line: d.line, source: 'manual' };
+  }
+  const themeKey = THEME_OF[id] || 'rose';
+  const { color, counts: c2 } = colorize(regions);
+  return { color, counts: c2, pots: potsOf(themeKey), line: THEMES[themeKey].line, source: themeKey };
+}
+
+export const fxKey = (e) => (EFFECTS.find((f) => f.id === e) || { key: 'plain' }).key;
 
 /** Перекрасить чёрные линии в цвет темы (серый → смесь белого и цвета линий). */
 export function tintLines(canvas, hex) {
@@ -136,7 +161,7 @@ export function colorize(regions) {
 }
 
 /** Готовая картинка («как на коробке») для плитки галереи. */
-export function renderPreview(pic, color, themeKey, width = 420) {
+export function renderPreview(pic, color, pots, width = 420) {
   const { w, h, lineCanvas, regions } = pic;
   const k = width / w;
   const cw = Math.round(width), ch = Math.round(h * k);
@@ -144,7 +169,6 @@ export function renderPreview(pic, color, themeKey, width = 420) {
   c.width = cw; c.height = ch;
   const x = c.getContext('2d');
   const id = x.createImageData(cw, ch), d = id.data;
-  const pots = potsOf(themeKey);
   for (let yy = 0; yy < ch; yy++) {
     const sy = Math.min(h - 1, Math.floor(yy / k));
     for (let xx = 0; xx < cw; xx++) {

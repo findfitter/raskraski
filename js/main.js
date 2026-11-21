@@ -148,6 +148,8 @@ async function openPicture(entry) {
   el.loading.hidden = false;
   el.loadingText.textContent = 'Готовлю картинку…';
   if (!viewer) viewer = new Viewer(el.cv, el.host, { onTap, getBrush, onStroke, onDoubleTap });
+    viewer.animate = animPref();
+    syncAnimBtn();
   try {
     const cached = await db.getRegions(entry.id).catch(() => null);
     if (!(cached && cached.algo === ALGO)) el.loadingText.textContent = 'Ищу области (первый раз, это недолго)…';
@@ -227,15 +229,18 @@ function buildPalette() {
     mkTool('fill', 'Заливка области', '<svg viewBox="0 0 24 24"><path d="M16.56 8.94L7.62 0 6.21 1.41l2.38 2.38-5.15 5.15c-.59.59-.59 1.54 0 2.12l5.5 5.5c.29.29.68.44 1.06.44s.77-.15 1.06-.44l5.5-5.5c.59-.58.59-1.53 0-2.12zM5.21 10L10 5.21 14.79 10H5.21zM19 11.5s-2 2.17-2 3.5c0 1.1.9 2 2 2s2-.9 2-2c0-1.33-2-3.5-2-3.5z"/></svg>');
     const dots = [8, 14, 22, 32];
     BRUSH_SIZES.forEach((z, i) => mkTool('b' + i, 'Кисть ' + (i + 1), `<i class="dot" style="width:${dots[i]}px;height:${dots[i]}px"></i>`));
-    sec('Эффекты');
-    const glyph = { 1: '✦', 3: '♥', 4: '★' };
-    EFFECTS.forEach((fx) => {
+    const glyph = { 1: '✦', 3: '♥', 4: '★', 8: '✦', 12: '♥' };
+    const mkFx = (fx) => {
       const b = document.createElement('button');
       b.className = 'sw fx fx-' + fx.key; b.dataset.fx = fx.id; b.setAttribute('aria-label', fx.name); b.title = fx.name;
       b.textContent = glyph[fx.id] || '';
       b.onclick = () => { effect = fx.id; markFreeSel(); toast(fx.name, 900); };
       P.appendChild(b);
-    });
+    };
+    sec('Эффекты');
+    EFFECTS.filter((f) => !f.anim).forEach(mkFx);
+    sec('Волшебные краски');
+    EFFECTS.filter((f) => f.anim).forEach(mkFx);
     sec('Цвета');
     FREE_COLORS.forEach((c, i) => {
       const b = document.createElement('button');
@@ -293,6 +298,14 @@ function getBrush() {
   if (mode !== 'free' || tool !== 'brush') return null;
   return { z: BRUSH_SIZES[brushIdx], e: effect, c: freeColor };
 }
+function animPref() {
+  let v = null;
+  try { v = localStorage.getItem('anim'); } catch { /* нет хранилища */ }
+  if (v === '0') return false;
+  if (v === '1') return true;
+  return !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); // по умолчанию уважаем настройку «меньше движения»
+}
+function syncAnimBtn() { const b = $('z-anim'); b.setAttribute('aria-pressed', String(animPref())); b.style.opacity = animPref() ? '1' : '.55'; }
 const newSeed = () => (Math.random() * 2147483647) | 0;
 function markNumSel() {
   for (const b of el.palette.children) b.classList.toggle('sel', +b.dataset.n === numSel);
@@ -468,6 +481,13 @@ $('btn-clear').onclick = async () => {
 $('z-in').onclick = () => viewer && viewer.zoomBy(1.5);
 $('z-out').onclick = () => viewer && viewer.zoomBy(1 / 1.5);
 $('z-fit').onclick = () => viewer && viewer.resetView(true);
+$('z-anim').onclick = () => {
+  const on = !animPref();
+  try { localStorage.setItem('anim', on ? '1' : '0'); } catch { /* нет хранилища — не страшно */ }
+  if (viewer) viewer.setAnimate(on);
+  syncAnimBtn();
+  toast(on ? 'Анимация красок включена' : 'Анимация красок выключена', 1200);
+};
 $('btn-export').onclick = () => exportAll().catch((e) => { console.error(e); toast('Не получилось сохранить копию'); });
 $('btn-import').onclick = () => $('file-import').click();
 $('file-import').onchange = async (e) => {

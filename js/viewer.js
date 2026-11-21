@@ -2,6 +2,7 @@
 // Слои: fillCanvas (цвета областей, белый фон) + контуры исходной картинки через multiply.
 
 import { PaintLayer } from './paintlayer.js';
+import { Animator } from './anim.js';
 
 const SLOP = 12;
 const BRUSH_SLOP = 5;      // px: после такого сдвига одним пальцем начинается мазок           // px: сдвиг пальца, после которого это уже не тап
@@ -28,6 +29,8 @@ export class Viewer {
     this.m = 0;               // поле вокруг картинки в пикселях картинки (рамка варианта «набор»)
     this.bg = '#cfd4dc';      // цвет стола за картинкой
     this.hideCovered = false; // скрывать номер, когда область уже наполовину закрашена мазками
+    this.animate = true;      // оживлять «волшебные» краски
+    this._animActive = false; this._animTimer = 0;
     this._bind();
     new ResizeObserver(() => this.resize()).observe(host);
   }
@@ -39,6 +42,7 @@ export class Viewer {
     this.cur = session.cur;        // Int32Array цветов подложки областей
     this.live = null;
     this.paint = new PaintLayer(pic.w, pic.h, pic.regions);
+    this.animator = new Animator(this.paint);
     const { w, h } = pic;
     this.fillCanvas = document.createElement('canvas');
     this.fillCanvas.width = w; this.fillCanvas.height = h;
@@ -78,14 +82,24 @@ export class Viewer {
       const list = this.session.byRegion[r];
       if (list.length) this.paint.replayRegion(r, this.session.stepsOfRegion(r));
     }
+    this._scanAnim();
+  }
+
+  /** Какие анимированные краски сейчас на картинке (после любого изменения шагов). */
+  _scanAnim() {
+    this.paint.setAnimFromSession(this.session);
+    this._animActive = this.paint.hasAnim();
+    if (this._animActive) this.animator.refreshMasks();
     this.invalidate();
   }
+
+  setAnimate(on) { this.animate = !!on; this.invalidate(); }
 
   /** После отмены/повтора/заливки: слой цветов и слой краски области по данным сессии. */
   syncRegion(r) {
     this.paintRegion(r, this.cur[r]);
     this.paint.replayRegion(r, this.session.stepsOfRegion(r));
-    this.invalidate();
+    this._scanAnim();
   }
 
   /** Мгновенная заливка одной области по карте (только по рамке области). rgb = -1 → белый. */
@@ -261,6 +275,8 @@ export class Viewer {
     ctx.drawImage(this.fillCanvas, 0, 0);
     ctx.drawImage(this.paint.canvas, 0, 0);
     if (this.live) ctx.drawImage(this.live.canvas, this.live.rect.x, this.live.rect.y);
+    const animOn = this.animate && this._animActive;
+    if (animOn) this.animator.draw(ctx, now / 1000);   // живые краски
     ctx.globalCompositeOperation = 'multiply';
     ctx.drawImage(this.pic.lineCanvas, 0, 0);
     ctx.globalCompositeOperation = 'source-over';
@@ -286,6 +302,9 @@ export class Viewer {
     if (this.mode === 'num') this._drawLabels(ctx, s);
 
     if (keep) this.invalidate();
+    else if (animOn && !this._animTimer) {   // кадры анимации — примерно 24 в секунду, чтобы не грузить планшет
+      this._animTimer = setTimeout(() => { this._animTimer = 0; this.invalidate(); }, 42);
+    }
   }
 
   /** Белая рамка со скосами и тенью (вариант «набор»). Координаты — в пикселях картинки. */
@@ -402,6 +421,7 @@ export class Viewer {
     live.commit();
     this.invalidate();
     if (this.cb.onStroke) this.cb.onStroke(live.step());
+    this._scanAnim();
   }
 
   _cancelStroke() {

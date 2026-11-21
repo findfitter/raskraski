@@ -4,7 +4,8 @@ import { ALGO } from './regions.js';
 import { Session, normalizeSteps } from './paint.js';
 import { Viewer } from './viewer.js';
 import { loadPicture } from './loader.js';
-import { THEMES, THEME_OF, KIT_OPTS, KIT_VARIANT, potsOf, tintLines, colorize, renderPreview } from './kit-style.js';
+import { KIT_OPTS, KIT_VARIANT, kitFor, fxKey, tintLines, renderPreview } from './kit-style.js';
+import { KIT } from './kit-data.js';
 import * as db from './db.js';
 
 const $ = (id) => document.getElementById(id);
@@ -37,15 +38,22 @@ function confirmDialog(title, text, okLabel = 'Да') {
     $('modal-ok').onclick = () => done(true); $('modal-cancel').onclick = () => done(false);
   });
 }
+function animPref() {
+  let v = null;
+  try { v = localStorage.getItem('anim'); } catch { /* нет хранилища */ }
+  if (v === '0') return false;
+  if (v === '1') return true;
+  return !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); // по умолчанию уважаем настройку «меньше движения»
+}
+function syncAnimBtn() { const b = $('z-anim'); b.setAttribute('aria-pressed', String(animPref())); b.style.opacity = animPref() ? '1' : '.55'; }
 const newSeed = () => (Math.random() * 2147483647) | 0;
 
 // ---------- подготовка картинки: области, контуры цвета темы, номера баночек ----------
 async function prepare(entry) {
   const p = await loadPicture(entry, { key: KEY(entry.id), opts: KIT_OPTS, variant: KIT_VARIANT });
-  const themeKey = THEME_OF[entry.id] || 'rose';
-  tintLines(p.lineCanvas, THEMES[themeKey].line);
-  const { color, counts } = colorize(p.regions);
-  return { ...p, regions: { ...p.regions, color }, themeKey, counts, pots: potsOf(themeKey) };
+  const k = kitFor(entry.id, p.regions);
+  tintLines(p.lineCanvas, k.line);
+  return { ...p, regions: { ...p.regions, color: k.color }, themeKey: k.source, counts: k.counts, pots: k.pots };
 }
 
 // ---------- галерея ----------
@@ -64,7 +72,8 @@ async function renderGallery() {
     b.dataset.id = e.id;
     b.innerHTML = '<div class="frame"><img class="thumb wait" alt="" draggable="false"></div><div class="meta"><span class="name"></span><span class="pbadge"></span></div><div class="sub"></div><div class="bar"><i></i></div>';
     b.querySelector('.name').textContent = e.title;
-    b.querySelector('.sub').textContent = 'Палитра: ' + THEMES[THEME_OF[e.id] || 'rose'].name;
+    const kd = KIT[e.id];
+    b.querySelector('.sub').textContent = kd ? '✨ ' + kd.pots[9][0] : '';
     b.querySelector('.pbadge').textContent = pct + '%';
     b.querySelector('.bar i').style.width = pct + '%';
     const img = b.querySelector('img');
@@ -82,7 +91,7 @@ async function fillPreviews() {
     if (run !== previewRun || previews.has(e.id)) continue;
     try {
       const p = await prepare(e);
-      const c = renderPreview(p, p.regions.color, p.themeKey, 420);
+      const c = renderPreview(p, p.regions.color, p.pots, 420);
       const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.88));
       const url = URL.createObjectURL(blob);
       previews.set(e.id, url);
@@ -116,6 +125,7 @@ async function openPicture(entry) {
   if (!viewer) {
     viewer = new Viewer(el.cv, el.host, { onTap, getBrush, canStroke, onStroke, onDoubleTap });
     viewer.m = FRAME; viewer.bg = '#d9d0c4'; viewer.hideCovered = true;
+    viewer.animate = animPref(); syncAnimBtn();
   }
   try {
     const p = await prepare(entry);
@@ -175,7 +185,7 @@ function buildPots() {
   for (const pot of pic.pots) {
     const b = document.createElement('button');
     const total = pic.counts[pot.n];
-    b.className = 'pot' + (pot.glitter ? ' glitter' : '') + (pot.n === numSel ? ' sel' : '') + (total === 0 ? ' empty' : left[pot.n] === 0 ? ' done' : '');
+    b.className = 'pot' + (pot.effect === 1 || pot.effect === 8 ? ' glitter' : '') + (pot.effect ? ' magic fx-' + fxKey(pot.effect) : '') + (pot.n === numSel ? ' sel' : '') + (total === 0 ? ' empty' : left[pot.n] === 0 ? ' done' : '');
     b.style.setProperty('--c', pot.hex);
     b.dataset.n = pot.n; b.title = pot.name;
     b.setAttribute('aria-label', `Баночка ${pot.n}, ${pot.name}`);
@@ -225,12 +235,12 @@ function canStroke(r) {
 function getBrush() {
   if (!session || tool === 'fill') return null;
   const pot = numSel ? pic.pots[numSel - 1] : pic.pots[0];
-  return { z: SIZES[+tool.slice(1)], e: pot.glitter ? 1 : 0, c: pot.rgb };
+  return { z: SIZES[+tool.slice(1)], e: pot.effect, c: pot.rgb };
 }
 
 function finishRegion(r) {   // область закрашена: ровная заливка вместо неровных мазков
   const pot = potOf(r);
-  if (session.fill(r, pot.rgb, pot.glitter ? 1 : 0, pot.glitter ? newSeed() : 0)) viewer.syncRegion(r);
+  if (session.fill(r, pot.rgb, pot.effect, pot.effect ? newSeed() : 0)) viewer.syncRegion(r);
 }
 
 function onTap(r) {          // инструмент «Заливка»
@@ -326,6 +336,13 @@ $('btn-clear').onclick = async () => {
 $('z-in').onclick = () => viewer && viewer.zoomBy(1.5);
 $('z-out').onclick = () => viewer && viewer.zoomBy(1 / 1.5);
 $('z-fit').onclick = () => viewer && viewer.resetView(true);
+$('z-anim').onclick = () => {
+  const on = !animPref();
+  try { localStorage.setItem('anim', on ? '1' : '0'); } catch { /* нет хранилища — не страшно */ }
+  if (viewer) viewer.setAnimate(on);
+  syncAnimBtn();
+  toast(on ? 'Анимация красок включена' : 'Анимация красок выключена', 1200);
+};
 $('btn-export').onclick = () => exportAll().catch((e) => { console.error(e); toast('Не получилось сохранить копию'); });
 $('btn-import').onclick = () => $('file-import').click();
 $('file-import').onchange = (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) importFile(f).catch((err) => { console.error(err); toast('Не получилось загрузить копию'); }); };
