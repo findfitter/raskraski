@@ -5,6 +5,7 @@ import { Session, normalizeSteps } from './paint.js';
 import { EFFECTS, BRUSH_SIZES } from './effects.js';
 import { Viewer } from './viewer.js';
 import * as db from './db.js';
+import { computeAny } from './loader.js';
 
 const $ = (id) => document.getElementById(id);
 const el = {
@@ -76,28 +77,6 @@ function grayOf(canvas) {
   const g = new Uint8Array(w * h);
   for (let i = 0, k = 0; i < g.length; i++, k += 4) g[i] = (d[k] * 77 + d[k + 1] * 150 + d[k + 2] * 29) >> 8;
   return g;
-}
-
-let worker = null;
-function computeInWorker(gray, w, h) {
-  return new Promise((resolve, reject) => {
-    try {
-      if (!worker) worker = new Worker('js/worker.js', { type: 'module' });
-      worker.onmessage = (e) => (e.data.ok ? resolve(e.data.res) : reject(new Error(e.data.error)));
-      worker.onerror = (e) => { worker = null; reject(new Error(e.message || 'worker error')); };
-      worker.postMessage({ gray, w, h }, [gray.buffer]);
-    } catch (err) { reject(err); }
-  });
-}
-
-async function computeAny(gray, w, h) {
-  try {
-    return await computeInWorker(gray, w, h);
-  } catch (err) {
-    console.warn('Worker недоступен, считаю в основном потоке:', err);
-    const { computeRegions } = await import('./regions.js');
-    return computeRegions(gray, w, h);
-  }
 }
 
 /** Картинка + карта областей. Карта считается один раз и кэшируется в IndexedDB. */

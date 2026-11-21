@@ -25,6 +25,9 @@ export class Viewer {
     this.overlay = null; this._ovCache = null; this._raf = 0; this._anim = null;
     this.tool = 'fill';       // 'fill' — тап заливает область, 'brush' — рисуем кистью
     this.live = null;         // текущий мазок
+    this.m = 0;               // поле вокруг картинки в пикселях картинки (рамка варианта «набор»)
+    this.bg = '#cfd4dc';      // цвет стола за картинкой
+    this.hideCovered = false; // скрывать номер, когда область уже наполовину закрашена мазками
     this._bind();
     new ResizeObserver(() => this.resize()).observe(host);
   }
@@ -136,7 +139,7 @@ export class Viewer {
     this.cv.height = Math.round(vh * dpr);
     if (this.pic) {
       const pad = 14;
-      this.fit = Math.min((vw - pad * 2) / this.pic.w, (vh - pad * 2) / this.pic.h);
+      this.fit = Math.min((vw - pad * 2) / (this.pic.w + 2 * this.m), (vh - pad * 2) / (this.pic.h + 2 * this.m));
       if (wasFit) this.resetView(false);
       else { this.s = Math.max(this.s, this.fit); this._clamp(); }
     }
@@ -146,7 +149,7 @@ export class Viewer {
   resetView(animated = true) {
     if (!this.pic) return;
     const s = this.fit;
-    const tx = (this.vw - this.pic.w * s) / 2, ty = (this.vh - this.pic.h * s) / 2;
+    const tx = (this.vw - this.pic.w * s) / 2, ty = (this.vh - this.pic.h * s) / 2; // поле m симметрично, центр тот же
     if (animated) this.animateTo(tx, ty, s);
     else { this._anim = null; this.s = s; this.tx = tx; this.ty = ty; this.invalidate(); }
   }
@@ -163,11 +166,16 @@ export class Viewer {
     this.invalidate();
   }
 
-  _clamp() {
-    const iw = this.pic.w * this.s, ih = this.pic.h * this.s, m = 40;
-    this.tx = iw <= this.vw ? (this.vw - iw) / 2 : Math.min(m, Math.max(this.vw - iw - m, this.tx));
-    this.ty = ih <= this.vh ? (this.vh - ih) / 2 : Math.min(m, Math.max(this.vh - ih - m, this.ty));
+  /** Ограничить сдвиг так, чтобы картинка (с полем рамки) не уезжала с экрана. */
+  _clampFor(tx, ty, s) {
+    const pm = this.m * s, iw = this.pic.w * s + 2 * pm, ih = this.pic.h * s + 2 * pm, m = 40;
+    return [
+      iw <= this.vw ? (this.vw - this.pic.w * s) / 2 : Math.min(m + pm, Math.max(this.vw - iw - m + pm, tx)),
+      ih <= this.vh ? (this.vh - this.pic.h * s) / 2 : Math.min(m + pm, Math.max(this.vh - ih - m + pm, ty)),
+    ];
   }
+
+  _clamp() { [this.tx, this.ty] = this._clampFor(this.tx, this.ty, this.s); }
 
   animateTo(tx, ty, s) {
     this._anim = { t0: performance.now(), dur: 260, from: [this.tx, this.ty, this.s], to: [tx, ty, s] };
@@ -185,10 +193,7 @@ export class Viewer {
     const readable = this.fs[r] * this.s >= 16;
     if (inView && readable) return;
     let s = Math.min(this.fit * 8, Math.max(this.fit, readable ? this.s : Math.max(this.s, Math.min(want, 16 / Math.max(this.fs[r], 1)))));
-    const tx = this.vw / 2 - lx * s, ty = this.vh / 2 - ly * s;
-    const iw = this.pic.w * s, ih = this.pic.h * s, m = 40;
-    const ctx = iw <= this.vw ? (this.vw - iw) / 2 : Math.min(m, Math.max(this.vw - iw - m, tx));
-    const cty = ih <= this.vh ? (this.vh - ih) / 2 : Math.min(m, Math.max(this.vh - ih - m, ty));
+    const [ctx, cty] = this._clampFor(this.vw / 2 - lx * s, this.vh / 2 - ly * s, s);
     this.animateTo(ctx, cty, s);
   }
 
@@ -247,11 +252,12 @@ export class Viewer {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
-    ctx.fillStyle = '#cfd4dc';
+    ctx.fillStyle = this.bg;
     ctx.fillRect(0, 0, this.cv.width, this.cv.height);
     ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * this.tx, dpr * this.ty);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'medium';
+    if (this.m > 0) this._drawFrame(ctx, dpr);
     ctx.drawImage(this.fillCanvas, 0, 0);
     ctx.drawImage(this.paint.canvas, 0, 0);
     if (this.live) ctx.drawImage(this.live.canvas, this.live.rect.x, this.live.rect.y);
@@ -282,6 +288,27 @@ export class Viewer {
     if (keep) this.invalidate();
   }
 
+  /** Белая рамка со скосами и тенью (вариант «набор»). Координаты — в пикселях картинки. */
+  _drawFrame(ctx, dpr) {
+    const m = this.m, w = this.pic.w, h = this.pic.h;
+    ctx.save();
+    ctx.shadowColor = 'rgba(70,50,30,.38)';
+    ctx.shadowBlur = 26 * dpr; ctx.shadowOffsetY = 10 * dpr;
+    ctx.fillStyle = '#f6f4ee';
+    ctx.fillRect(-m, -m, w + 2 * m, h + 2 * m);
+    ctx.restore();
+    const poly = (c, pts) => { ctx.fillStyle = c; ctx.beginPath(); pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); ctx.fill(); };
+    poly('#ffffff', [[-m, -m], [w + m, -m], [w, 0], [0, 0]]);
+    poly('#ebe8e0', [[-m, -m], [0, 0], [0, h], [-m, h + m]]);
+    poly('#dcd8cf', [[w + m, -m], [w, 0], [w, h], [w + m, h + m]]);
+    poly('#cbc7bd', [[-m, h + m], [0, h], [w, h], [w + m, h + m]]);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(0,0,0,.22)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(1.5, 1.5, w - 3, h - 3);
+  }
+
   _drawLabels(ctx, s) {
     const R = this.pic.regions;
     const x0 = -this.tx / s - 40, y0 = -this.ty / s - 40;
@@ -291,6 +318,7 @@ export class Viewer {
     ctx.lineJoin = 'round';
     for (let r = 1; r <= R.count; r++) {
       if (this.cur[r] >= 0) continue;
+      if (this.hideCovered && this.session.fraction(r) >= 0.25) continue;
       const fs = this.fs[r];
       if (fs * s < MIN_LABEL_PX) continue;
       const x = R.lx[r], y = R.ly[r];
@@ -356,6 +384,7 @@ export class Viewer {
     const r = regions.map[iy * w + ix];
     const b = this.cb.getBrush && this.cb.getBrush();
     if (!r || !b) return null;
+    if (this.cb.canStroke && !this.cb.canStroke(r)) return null;
     const live = this.paint.begin(r, b.z, b.e, b.c, (Math.random() * 2147483647) | 0);
     live.add(x, y);
     return live;

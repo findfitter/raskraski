@@ -123,3 +123,4 @@ svg { width: 26px; height: 26px; fill: currentColor; flex: none; }
 .fx-gold { background: linear-gradient(135deg, #9a7418, #e8c25a 35%, #fff1a8 55%, #e8c25a 75%, #9a7418); }
 .fx-silver { background: linear-gradient(135deg, #8d949e, #dfe3e8 35%, #fff 55%, #dfe3e8 75%, #8d949e); }
 .fx-pearl { background: linear-gradient(135deg, #ffd1e8, #d8c8ff 28%, #c4f0ff 52%, #d4ffe8 74%, #fff3c4); }
+a.btn { text-decoration: none; }

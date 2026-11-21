@@ -1,10 +1,10 @@
 // Service worker: всё приложение кладётся в кэш при установке, дальше работает без сети.
 // Стратегия: сначала кэш, параллельно тихое обновление (stale-while-revalidate).
 // Изменил файлы приложения — увеличь номер версии, чтобы старый кэш был заменён.
-const VERSION = 'raskraska-v6';
+const VERSION = 'raskraska-v7';
 const ASSETS = [
-  './', 'index.html', 'manifest.json', 'css/style.css',
-  'js/main.js', 'js/regions.js', 'js/worker.js', 'js/viewer.js', 'js/paint.js', 'js/palette.js', 'js/catalog.js', 'js/db.js', 'js/effects.js', 'js/paintlayer.js',
+  './', 'index.html', 'kit.html', 'manifest.json', 'css/style.css', 'css/kit.css',
+  'js/main.js', 'js/regions.js', 'js/worker.js', 'js/viewer.js', 'js/paint.js', 'js/palette.js', 'js/catalog.js', 'js/db.js', 'js/effects.js', 'js/paintlayer.js', 'js/loader.js', 'js/kit-style.js', 'js/kit.js',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
   ...Array.from({ length: 10 }, (_, i) => `images/p${String(i + 1).padStart(2, '0')}.jpg`),
 ];

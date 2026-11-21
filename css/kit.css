@@ -1,0 +1,45 @@
+/* Вариант «набор»: пастельные тона, рамка, баночки с краской */
+body.kit { --bg: #f1e9df; --bar: #5b4a63; --accent: #e8738f; --pot: clamp(68px, 10vh, 90px); background: var(--bg); }
+
+.kit .gbar h1 { font-size: 26px; }
+.kit .topbar { gap: 8px; }
+.kit .canvas-host { background: #d9d0c4; }
+.kit .loading { background: rgba(241,233,223,.93); }
+
+/* галерея: готовая картинка в рамке, как на коробке */
+.kitgrid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.kit .tile { background: #fbf8f2; }
+.kit .tile .frame { padding: 10px; background: linear-gradient(135deg, #fff, #e4e0d6); margin: 10px 10px 0; border-radius: 4px; box-shadow: 0 3px 8px rgba(70,50,30,.25), inset 0 0 0 1px rgba(255,255,255,.8); }
+.kit .tile .thumb { width: 100%; aspect-ratio: 1312 / 816; background: #fff; box-shadow: inset 0 0 0 1px rgba(0,0,0,.18); object-fit: cover; display: block; }
+.kit .tile .thumb.wait { background: repeating-linear-gradient(45deg, #fff, #fff 8px, #f3efe7 8px, #f3efe7 16px); }
+.kit .tile .bar i { background: var(--accent); }
+.kit .tile.started .pbadge { background: #fbd9e2; }
+.kit .tile .sub { font-size: 12px; color: #7a7083; padding: 0 12px 8px; margin-top: -4px; }
+
+/* инструменты в верхней панели */
+.seg .dot { display: block; background: currentColor; border-radius: 50%; }
+.seg .segbtn { display: inline-flex; align-items: center; justify-content: center; min-width: 52px; padding: 0 10px; }
+.seg .segbtn svg { width: 26px; height: 26px; }
+
+/* панель с баночками */
+.kitpanel { width: calc(var(--pot) * 2 + 12px + 14px * 2 + 8px); padding: 16px 14px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; align-content: flex-start; gap: 10px; background: #f8f2e9; border-left: 2px solid #e3d8c8; }
+.kitpanel .ttl { font-size: 13px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: #8b7f95; align-self: flex-start; }
+.pots { display: grid; grid-template-columns: repeat(2, var(--pot)); gap: 14px 12px; }
+.pot { --c: #ccc; position: relative; width: var(--pot); height: var(--pot); padding: 0; border: 0; border-radius: 50%; background: #fff; cursor: pointer;
+  box-shadow: 0 4px 0 rgba(60,40,30,.2), 0 0 0 2px rgba(60,40,30,.07); transition: transform .12s; }
+.pot .paint { position: absolute; inset: 8%; border-radius: 50%;
+  background: radial-gradient(circle at 32% 26%, rgba(255,255,255,.7) 0 9%, transparent 10%), radial-gradient(circle at 50% 55%, var(--c) 0 58%, color-mix(in srgb, var(--c) 80%, #000) 100%);
+  box-shadow: inset 0 -5px 8px rgba(0,0,0,.16), inset 0 3px 5px rgba(255,255,255,.4); }
+.pot .num { position: absolute; left: 50%; top: 50%; width: 46%; height: 46%; transform: translate(-50%, -50%); border-radius: 50%; background: #fff; color: #2a2638;
+  font-weight: 800; font-size: calc(var(--pot) * .27); display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+.pot .left { position: absolute; right: -5px; bottom: -5px; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 13px; background: #5b4a63; color: #fff; font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; border: 2px solid #f8f2e9; }
+.pot.sel { transform: translateY(-5px) scale(1.07); box-shadow: 0 0 0 4px #5b4a63, 0 9px 0 rgba(60,40,30,.18); z-index: 1; }
+.pot.done { opacity: .42; }
+.pot.done .left { background: var(--ok); }
+.pot.empty { opacity: .25; pointer-events: none; }
+.pot.glitter .paint::after { content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle at 22% 62%, #fff 0 2px, transparent 3px), radial-gradient(circle at 78% 30%, #fff 0 2px, transparent 3px), radial-gradient(circle at 70% 78%, #fff6c9 0 2.5px, transparent 3.5px),
+    radial-gradient(circle at 36% 20%, #fff6c9 0 1.5px, transparent 2.5px), radial-gradient(circle at 86% 58%, #fff 0 1.5px, transparent 2.5px); }
+.pot.pulse { animation: pulse .5s ease 2; }
+.potname { font-size: 12px; color: #7a7083; text-align: center; min-height: 32px; line-height: 1.25; }
