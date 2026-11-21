@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#5b4a63">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Соедини точки</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/kit.css">
+<link rel="stylesheet" href="css/dots.css">
+</head>
+<body class="kit dots">
+<section id="game" class="screen">
+  <div class="stage">
+    <div class="topbar">
+      <a id="btn-back" class="btn" href="./" aria-label="В галерею"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg><span>Галерея</span></a>
+      <button id="btn-undo" class="btn" aria-label="Отмена"><svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg><span>Отмена</span></button>
+      <button id="btn-restart" class="btn" aria-label="Начать заново"><svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg><span>Заново</span></button>
+      <h1 class="dots-title">Соедини точки <span class="badge">тест</span></h1>
+      <div class="spacer"></div>
+      <span id="progress" class="pct">0 из 0</span>
+    </div>
+    <div id="host" class="canvas-host">
+      <canvas id="cv"></canvas>
+      <div class="zoombtns">
+        <button id="z-in" class="btn sq" aria-label="Приблизить"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></button>
+        <button id="z-out" class="btn sq" aria-label="Отдалить"><svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg></button>
+        <button id="z-fit" class="btn sq" aria-label="Сбросить масштаб"><svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg></button>
+      </div>
+      <div id="loading" class="loading" hidden><div class="spinner"></div><div>Готовлю картинку…</div></div>
+      <div id="done" class="donebox" hidden>
+        <div class="donetitle" id="donetitle">Получилось!</div>
+        <div class="donebtns">
+          <button id="btn-again" class="btn">Ещё раз</button>
+          <a id="btn-paint" class="btn accent" href="./#p03">Раскрасить эту картинку</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script type="module" src="js/dots.js"></script>
+</body>
+</html>

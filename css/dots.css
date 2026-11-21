@@ -1,0 +1,13 @@
+/* Соедини точки */
+body.dots .dots-title { margin: 0 0 0 6px; color: #fff; font-size: 22px; font-weight: 800; white-space: nowrap; }
+body.dots .badge { font-size: 12px; vertical-align: middle; margin-left: 6px; }
+body.dots #btn-back { text-decoration: none; }
+body.dots .canvas-host { background: #d9d0c4; }
+.donebox { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 12px;
+  background: rgba(255,255,255,.94); border-radius: 22px; padding: 16px 24px; box-shadow: 0 10px 30px rgba(60,40,30,.3); z-index: 5; animation: pop .45s ease; }
+.donetitle { font-size: 24px; font-weight: 800; color: #3d3350; text-align: center; }
+.donebtns { display: flex; gap: 12px; }
+.donebtns .btn { border: 2px solid #e7e1d1; text-decoration: none; }
+.donebtns .btn.accent { border-color: transparent; }
+@keyframes pop { from { transform: translateX(-50%) scale(.7); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
+@media (max-width: 1100px) { body.dots .topbar .btn span { display: none; } body.dots .topbar #btn-back span { display: inline; } .dots-title { font-size: 18px; } }
