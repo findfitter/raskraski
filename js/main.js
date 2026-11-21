@@ -2,7 +2,7 @@ import { CATALOG, MAX_SIDE } from './catalog.js';
 import { ALGO, NCOLORS } from './regions.js';
 import { NUM_COLORS, FREE_COLORS, hexOf, inkOn } from './palette.js';
 import { Session, normalizeSteps } from './paint.js';
-import { EFFECTS, BRUSH_SIZES } from './effects.js';
+import { EFFECTS, BRUSH_SIZES, SELF_COLORED } from './effects.js';
 import { Viewer } from './viewer.js';
 import * as db from './db.js';
 import { computeAny } from './loader.js';
@@ -248,7 +248,7 @@ function buildPalette() {
       b.style.background = c.hex;
       b.dataset.key = 's' + i;
       b.setAttribute('aria-label', 'Цвет ' + c.hex);
-      b.onclick = () => { freeColor = c.rgb; freeKey = 's' + i; markFreeSel(); };
+      b.onclick = () => { freeColor = c.rgb; freeKey = 's' + i; plainIfSelfColored(); markFreeSel(); };
       P.appendChild(b);
     });
     const lab = document.createElement('label');
@@ -263,6 +263,7 @@ function buildPalette() {
       customColor = parseInt(inp.value.slice(1), 16);
       freeColor = customColor; freeKey = 'c';
       lab.style.background = hexOf(customColor);
+      plainIfSelfColored();
       markFreeSel();
     };
     inp.addEventListener('input', setCustom);
@@ -292,6 +293,10 @@ function markFreeSel() {
     else if (b.dataset.fx !== undefined) b.classList.toggle('sel', +b.dataset.fx === effect);
     else if (b.dataset.key !== undefined) b.classList.toggle('sel', b.dataset.key === freeKey);
   }
+}
+/** Радуга, золото, галактика и т. п. красят своим цветом: если выбрали обычный цвет, возвращаемся к обычной краске. */
+function plainIfSelfColored() {
+  if (SELF_COLORED.has(effect)) { effect = 0; toast('Обычная краска', 900); }
 }
 function applyTool() { if (viewer) viewer.tool = mode === 'free' ? tool : 'fill'; }
 function getBrush() {

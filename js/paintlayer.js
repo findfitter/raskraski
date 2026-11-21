@@ -154,8 +154,17 @@ export class LiveStroke {
   }
 
   commit() {
-    this.pl.ctx.drawImage(this.canvas, this.rect.x, this.rect.y);
-    if (isAnimated(this.e)) this.pl.maskFor(this.e).getContext('2d').drawImage(this.canvas, this.rect.x, this.rect.y); // форма для анимации
+    const { x, y } = this.rect;
+    this.pl.ctx.drawImage(this.canvas, x, y);
+    if (isAnimated(this.e)) this.pl.maskFor(this.e).getContext('2d').drawImage(this.canvas, x, y); // форма для анимации
+    // этот мазок лежит поверх старых анимированных красок других видов: их живой узор в этом месте убираем
+    for (const [k, m] of Object.entries(this.pl.masks)) {
+      if (+k === this.e) continue;
+      const mx = m.getContext('2d');
+      mx.globalCompositeOperation = 'destination-out';
+      mx.drawImage(this.canvas, x, y);
+      mx.globalCompositeOperation = 'source-over';
+    }
   }
 
   step() { return { k: 's', r: this.r, c: this.c, e: this.e, z: this.z, s: this.seed, p: this.pts }; }

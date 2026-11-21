@@ -19,6 +19,8 @@ export const EFFECTS = [
   { id: 12, key: 'flyhearts', name: 'Летящие сердечки', anim: true },
 ];
 export const isAnimated = (e) => e >= 8;
+/** Эффекты со своим собственным цветом: выбор обычного цвета отключает их (радуга, золото, серебро, перламутр, галактика…). */
+export const SELF_COLORED = new Set([2, 5, 6, 7, 9, 10, 11]);
 export const BRUSH_SIZES = [6, 14, 28, 52]; // диаметр кисти в пикселях картинки
 
 export function mulberry32(a) {

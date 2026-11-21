@@ -274,9 +274,9 @@ export class Viewer {
     if (this.m > 0) this._drawFrame(ctx, dpr);
     ctx.drawImage(this.fillCanvas, 0, 0);
     ctx.drawImage(this.paint.canvas, 0, 0);
-    if (this.live) ctx.drawImage(this.live.canvas, this.live.rect.x, this.live.rect.y);
     const animOn = this.animate && this._animActive;
     if (animOn) this.animator.draw(ctx, now / 1000);   // живые краски
+    if (this.live) ctx.drawImage(this.live.canvas, this.live.rect.x, this.live.rect.y); // идущий мазок поверх них
     ctx.globalCompositeOperation = 'multiply';
     ctx.drawImage(this.pic.lineCanvas, 0, 0);
     ctx.globalCompositeOperation = 'source-over';

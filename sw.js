@@ -1,7 +1,7 @@
 // Service worker: всё приложение кладётся в кэш при установке, дальше работает без сети.
 // Стратегия: сначала кэш, параллельно тихое обновление (stale-while-revalidate).
 // Изменил файлы приложения — увеличь номер версии, чтобы старый кэш был заменён.
-const VERSION = 'raskraska-v10';
+const VERSION = 'raskraska-v11';
 const ASSETS = [
   './', 'index.html', 'free.html', 'kit.html', 'manifest.json', 'css/style.css', 'css/kit.css',
   'js/main.js', 'js/regions.js', 'js/worker.js', 'js/viewer.js', 'js/paint.js', 'js/palette.js', 'js/catalog.js', 'js/db.js', 'js/effects.js', 'js/paintlayer.js', 'js/loader.js', 'js/kit-style.js', 'js/kit.js', 'js/anim.js', 'js/kit-data.js', 'js/kit-data-complex.js', 'js/kit-colormaps.js',
